@@ -25,9 +25,7 @@ func TestWatch_long(t *testing.T) {
 	sens.UseDefaults()
 	sens.Root = d.Path()
 	sens.Pause = 100 * time.Millisecond
-	plus := 3 * sens.Pause
-
-	sens.React = func(modified ...string) {
+	sens.Visit = func(modified ...string) {
 		calls++
 		if len(modified) > 1 {
 			multiple = true
@@ -39,6 +37,8 @@ func TestWatch_long(t *testing.T) {
 	go sens.Run(ctx)
 	time.Sleep(100 * time.Millisecond)
 	d.Touch("x")
+
+	plus := 3 * sens.Pause
 	time.Sleep(plus)
 	d.Touch("x")
 	time.Sleep(plus)
@@ -61,7 +61,7 @@ func TestWatch(t *testing.T) {
 	)
 	sens.UseDefaults()
 	sens.Root = d.Path()
-	sens.React = func(...string) { called = true }
+	sens.Visit = func(...string) { called = true }
 	sens.Pause = 50 * time.Millisecond
 	plus := sens.Pause + 10*time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())

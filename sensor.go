@@ -15,7 +15,7 @@ type Sensor struct {
 	modified  []string
 	ignore    []string
 	Root      string
-	React     ModifiedFunc
+	Visit     Visitor
 }
 
 func (s *Sensor) Run(ctx context.Context) {
@@ -26,7 +26,7 @@ func (s *Sensor) Run(ctx context.Context) {
 		case <-time.After(s.Pause):
 			s.scanForChanges()
 			if len(s.modified) > 0 {
-				s.React(s.modified...)
+				s.Visit(s.modified...)
 				// Reset modified files, should not leak memory as
 				// it's only strings
 				s.modified = s.modified[:0:0]
@@ -36,7 +36,7 @@ func (s *Sensor) Run(ctx context.Context) {
 	}
 }
 
-type ModifiedFunc func(modified ...string)
+type Visitor func(modified ...string)
 
 // UseDefaults sets sensible sensor values and ignores for current working directory.
 // React is a noop.
@@ -46,10 +46,10 @@ func (s *Sensor) UseDefaults() {
 	s.modified = make([]string, 0)
 	s.ignore = []string{"#", ".git/", "vendor/"}
 	s.Root, _ = os.Getwd()
-	s.React = noReact
+	s.Visit = noop
 }
 
-func noReact(...string) {}
+func noop(...string) {}
 
 func (s *Sensor) scanForChanges() {
 	filepath.Walk(s.Root, s.visit)
