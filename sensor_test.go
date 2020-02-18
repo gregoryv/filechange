@@ -58,7 +58,7 @@ func TestWatch(t *testing.T) {
 		called bool
 		sens   = new(Sensor)
 	)
-	sens.UseDefaults()
+	sens.Ignore = []string{"vendor/"}
 	sens.Root = d.Path()
 	sens.Visit = func(...string) { called = true }
 	sens.Pause = 50 * time.Millisecond

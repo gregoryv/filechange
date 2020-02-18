@@ -13,7 +13,7 @@ type Sensor struct {
 	Pause     time.Duration // between scans
 	Last      time.Time
 	modified  []string
-	ignore    []string
+	Ignore    []string
 	Root      string
 	Visit     Visitor
 }
@@ -46,12 +46,6 @@ func (s *Sensor) Run(ctx context.Context) {
 
 type Visitor func(modified ...string)
 
-// UseDefaults sets sensible sensor values and ignores for current working directory.
-// React is a noop.
-func (s *Sensor) UseDefaults() {
-	s.ignore = []string{"#", ".git/", "vendor/"}
-}
-
 func noop(...string) {}
 
 func (s *Sensor) scanForChanges() {
@@ -62,8 +56,8 @@ func (s *Sensor) scanForChanges() {
 }
 
 // Ignore returns true if the file should be ignored
-func (s *Sensor) Ignore(path string, f os.FileInfo) bool {
-	for _, str := range s.ignore {
+func (s *Sensor) ignore(path string, f os.FileInfo) bool {
+	for _, str := range s.Ignore {
 		if strings.Contains(path, str) {
 			return true
 		}
@@ -72,7 +66,7 @@ func (s *Sensor) Ignore(path string, f os.FileInfo) bool {
 }
 
 func (s *Sensor) visit(path string, f os.FileInfo, err error) error {
-	if s.Ignore(path, f) {
+	if s.ignore(path, f) {
 		if f.IsDir() {
 			if s.Recursive {
 				return nil
