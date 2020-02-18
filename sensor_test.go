@@ -22,7 +22,6 @@ func TestWatch_long(t *testing.T) {
 		multiple bool
 		sens     = new(Sensor)
 	)
-	sens.UseDefaults()
 	sens.Root = d.Path()
 	sens.Pause = 100 * time.Millisecond
 	sens.Visit = func(modified ...string) {

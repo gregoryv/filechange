@@ -19,6 +19,14 @@ type Sensor struct {
 }
 
 func (s *Sensor) Run(ctx context.Context) {
+	if s.Pause == 0 {
+		s.Pause = time.Second
+	}
+	s.Last = time.Now()
+	s.modified = make([]string, 0)
+	if s.Visit == nil {
+		s.Visit = noop
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -41,17 +49,15 @@ type Visitor func(modified ...string)
 // UseDefaults sets sensible sensor values and ignores for current working directory.
 // React is a noop.
 func (s *Sensor) UseDefaults() {
-	s.Pause = time.Second
-	s.Last = time.Now()
-	s.modified = make([]string, 0)
 	s.ignore = []string{"#", ".git/", "vendor/"}
-	s.Root, _ = os.Getwd()
-	s.Visit = noop
 }
 
 func noop(...string) {}
 
 func (s *Sensor) scanForChanges() {
+	if s.Root == "" {
+		s.Root, _ = os.Getwd()
+	}
 	filepath.Walk(s.Root, s.visit)
 }
 
