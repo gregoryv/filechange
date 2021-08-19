@@ -66,6 +66,9 @@ func (s *Sensor) ignore(path string, f os.FileInfo) bool {
 }
 
 func (s *Sensor) visit(path string, f os.FileInfo, err error) error {
+	if f == nil {
+		return nil
+	}
 	if s.ignore(path, f) {
 		if f.IsDir() {
 			if s.Recursive {
