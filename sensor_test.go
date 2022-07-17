@@ -3,103 +3,81 @@ package filechange
 import (
 	"context"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/gregoryv/working"
 )
 
-func TestWatch_long(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	d := new(working.Directory)
-	d.Temporary()
-	defer d.RemoveAll()
+func TestSensor_Run(t *testing.T) {
+	// test changes in a temporary directory
+	dir := t.TempDir()
 
-	var (
-		calls    int
-		multiple bool
-		sens     = new(Sensor)
-	)
-	sens.Root = d.Path()
-	sens.Pause = 100 * time.Millisecond
-	sens.Visit = func(modified ...string) {
-		calls++
-		if len(modified) > 1 {
-			multiple = true
-		}
-		d.Touch("y")
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go sens.Run(ctx)
-	time.Sleep(100 * time.Millisecond)
-	d.Touch("x")
+	// create a structure
+	os.MkdirAll(filepath.Join(dir, "sub"), 0722)
+	os.MkdirAll(filepath.Join(dir, "vendor/a/b"), 0722)
 
-	plus := 3 * sens.Pause
-	time.Sleep(plus)
-	d.Touch("x")
-	time.Sleep(plus)
-	if calls != 2 {
-		t.Errorf("File changed twice but sensor reacted %v times", calls)
-	}
-	if multiple {
-		t.Error("Got multiple changes")
-	}
-}
-
-func TestWatch(t *testing.T) {
-	d := new(working.Directory)
-	d.Temporary()
-	defer d.RemoveAll()
-	d.MkdirAll("sub", "vendor/a/b")
 	var (
 		called bool
-		sens   = new(Sensor)
+		sens   = &Sensor{
+			Ignore:    []string{"vendor/"},
+			Recursive: true,
+			Root:      dir,
+			Visit:     func(...string) { called = true },
+			Pause:     50 * time.Millisecond,
+		}
+		plus  = sens.Pause + 10*time.Millisecond
+		touch = func(filename string) *exec.Cmd {
+			cmd := exec.Command("touch", filepath.Join(dir, filename))
+			if err := cmd.Run(); err != nil {
+				t.Helper()
+				t.Fatal(err)
+			}
+			return cmd
+		}
 	)
-	sens.Ignore = []string{"vendor/"}
-	sens.Root = d.Path()
-	sens.Visit = func(...string) { called = true }
-	sens.Pause = 50 * time.Millisecond
-	plus := sens.Pause + 10*time.Millisecond
+
+	// start sensor
 	ctx, cancel := context.WithCancel(context.Background())
 	go sens.Run(ctx)
 	defer cancel()
 	time.Sleep(plus)
 
-	shouldSense := func(s string, err error) {
-		t.Helper()
-		called = false
-		time.Sleep(plus)
-		if !called {
-			t.Error(s)
-		}
+	// create file in root triggers sensor
+	cmd := touch("a.txt")
+	if time.Sleep(plus); !called {
+		t.Errorf("%q should trigger sensor", cmd)
 	}
-	shouldSense(d.Touch("a"))
 
-	shouldNotSense := func(s string, err error) {
-		t.Helper()
-		called = false
-		time.Sleep(plus)
-		if called {
-			t.Error(s)
-		}
+	// create file in subdir triggers sensor when recursive
+	called = false // reset
+	cmd = touch("sub/b.txt")
+	if time.Sleep(plus); !called {
+		t.Errorf("%q should trigger sensor", cmd)
 	}
-	// Not recursive
-	shouldNotSense(d.Touch("sub/hello"))
 
-	// vendor should be ignored by default
-	shouldNotSense(d.Touch("vendor/noop"))
+	// create file in ignored subdir does not trigger sensor
+	called = false // reset
+	cmd = touch("vendor/noop")
+	if time.Sleep(plus); called {
+		t.Errorf("%q triggered sensor on ignored directory", cmd)
+	}
 
-	// Directories are ignored by default
-	shouldNotSense(d.Touch("vendor"))
+	// create directory is ignored
+	called = false
+	os.MkdirAll(filepath.Join(dir, "Xdir"), 0722)
+	if time.Sleep(plus); called {
+		t.Errorf("mkdir in root triggered sensor")
+	}
 
-	// Removed
-	sens.Recursive = true
-	d.MkdirAll("sub")
-	d.Touch("sub/x")
-	os.RemoveAll(d.Join("sub"))
-	time.Sleep(plus)
-	shouldNotSense("", nil)
+	/*
+
+		// Removed
+		sens.Recursive = true
+		d.MkdirAll("sub")
+		d.Touch("sub/x")
+		os.RemoveAll(d.Join("sub"))
+		time.Sleep(plus)
+		shouldNotSense("", nil)
+	*/
 }
