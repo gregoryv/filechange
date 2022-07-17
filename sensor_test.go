@@ -51,11 +51,6 @@ func TestSensor_Run(t *testing.T) {
 	if cmd := touch("a.txt"); wait() && !called {
 		t.Errorf("%q should trigger sensor", cmd)
 	}
-	// verify that the modification is also send on the channel
-	got := <-sensor.Modified()
-	if filename := filepath.Base(got[0]); filename != "a.txt" {
-		t.Error(filename)
-	}
 
 	// "create file in subdir triggers sensor when recursive"
 	reset()
