@@ -10,7 +10,7 @@ import (
 )
 
 func TestSensor_Run(t *testing.T) {
-	// test changes in a temporary directory
+	// test sensor in a temporary directory
 	dir := t.TempDir()
 
 	// create a structure
@@ -20,7 +20,7 @@ func TestSensor_Run(t *testing.T) {
 	var (
 		called bool
 		sens   = &Sensor{
-			Ignore:    []string{"vendor/"},
+			Ignore:    []string{"vendor/", "build"},
 			Recursive: true,
 			root:      dir,
 			visit:     func(...string) { called = true },
@@ -68,6 +68,22 @@ func TestSensor_Run(t *testing.T) {
 	os.MkdirAll(filepath.Join(dir, "Xdir"), 0722)
 	if time.Sleep(plus); called {
 		t.Errorf("mkdir in root triggered sensor")
+	}
+
+	// create file in subdir is ignored when Not recursive
+	called = false // reset
+	sens.Recursive = false
+	cmd = touch("sub/something.txt")
+	if time.Sleep(plus); called {
+		t.Errorf("%q triggered sensor", cmd)
+	}
+
+	// create directory in root is ignored
+	called = false // reset
+	sens.Recursive = false
+	os.MkdirAll(filepath.Join(dir, "build"), 0722)
+	if time.Sleep(plus); called {
+		t.Errorf("%q triggered sensor", cmd)
 	}
 
 	/*

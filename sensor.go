@@ -56,8 +56,6 @@ func (s *Sensor) Run(ctx context.Context) {
 // arguments.
 type Visitor func(modified ...string)
 
-func noop(...string) {}
-
 func (s *Sensor) scanForChanges() {
 	filepath.Walk(s.root, s.checkModTime)
 }
