@@ -18,17 +18,15 @@ func TestSensor_Run(t *testing.T) {
 	os.MkdirAll(filepath.Join(dir, "vendor/a/b"), 0722)
 
 	var called bool
-	visit := func(...string) { called = true }
-
-	sens := NewSensor(dir, visit)
-	sens.Ignore = []string{"vendor/", "build"}
-	sens.Recursive = true
+	sensor := NewSensor(dir, func(...string) { called = true })
+	sensor.Ignore = []string{"vendor/", "build"}
+	sensor.Recursive = true
 	// Use shorter interval to speed up test
 	walkEstimate := time.Millisecond // measured to 29.098µs
-	sens.Pause = 10 * walkEstimate
+	sensor.Pause = 10 * walkEstimate
 
 	var (
-		plus  = sens.Pause + 3*walkEstimate
+		plus  = sensor.Pause + 3*walkEstimate
 		touch = func(filename string) *exec.Cmd {
 			cmd := exec.Command("touch", filepath.Join(dir, filename))
 			if err := cmd.Run(); err != nil {
@@ -37,69 +35,72 @@ func TestSensor_Run(t *testing.T) {
 			}
 			return cmd
 		}
+		reset = func() { called = false }
+		wait  = func() bool { time.Sleep(plus); return true }
 	)
 
+	// Note! the same sensor instance is used in all cases
 	// start sensor
 	ctx, cancel := context.WithCancel(context.Background())
-	go sens.Run(ctx)
+	go sensor.Run(ctx)
 	defer cancel()
-	time.Sleep(plus)
+	wait()
 
 	// create file in root triggers sensor
-	cmd := touch("a.txt")
-	if time.Sleep(plus); !called {
+	reset()
+	if cmd := touch("a.txt"); wait() && !called {
 		t.Errorf("%q should trigger sensor", cmd)
 	}
 
-	// create file in subdir triggers sensor when recursive
-	called = false // reset
-	cmd = touch("sub/b.txt")
-	if time.Sleep(plus); !called {
+	// "create file in subdir triggers sensor when recursive"
+	reset()
+	if cmd := touch("sub/b.txt"); wait() && !called {
 		t.Errorf("%q should trigger sensor", cmd)
 	}
 
 	// create file in ignored subdir does not trigger sensor
-	called = false // reset
-	cmd = touch("vendor/noop")
-	if time.Sleep(plus); called {
+	reset()
+	cmd := touch("vendor/noop")
+	if wait() && called {
 		t.Errorf("%q triggered sensor on ignored directory", cmd)
 	}
 
 	// create directory is ignored
-	called = false
+	reset()
 	os.MkdirAll(filepath.Join(dir, "Xdir"), 0722)
-	if time.Sleep(plus); called {
+	if wait() && called {
 		t.Errorf("mkdir in root triggered sensor")
 	}
 
 	// create file in subdir is ignored when Not recursive
-	called = false // reset
-	sens.Recursive = false
-	cmd = touch("sub/something.txt")
-	if time.Sleep(plus); called {
+	reset()
+	sensor.Recursive = false
+
+	if cmd := touch("sub/something.txt"); wait() && called {
 		t.Errorf("%q triggered sensor", cmd)
 	}
 
 	// create directory in root is ignored
-	called = false // reset
-	sens.Recursive = false
+	reset()
+	sensor.Recursive = false
 	os.MkdirAll(filepath.Join(dir, "build"), 0722)
-	if time.Sleep(plus); called {
+	if wait() && called {
 		t.Errorf("%q triggered sensor", cmd)
 	}
 
 	// FileInfo is nil
-	called = false // reset
-	sens.root = "/no-such-directory"
-	if time.Sleep(plus); called {
+	reset()
+	sensor.root = "/no-such-directory"
+	if wait() && called {
 		t.Errorf("%q triggered sensor", cmd)
 	}
 
 	// Removing file should not trigger sensor
-	sens.Recursive = true
-	touch("sub/toremove")
+	reset()
+	sensor.Recursive = true
+	_ = touch("sub/toremove")
 	os.RemoveAll(filepath.Join(dir, "sub/toremove"))
-	if time.Sleep(plus); called {
+	if wait() && called {
 		t.Error("removing file triggered sensor")
 	}
-}
+} // 106
