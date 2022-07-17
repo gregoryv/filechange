@@ -12,14 +12,16 @@ type Sensor struct {
 	Recursive bool
 	Pause     time.Duration // between scans
 	Last      time.Time
-	modified  []string
-	Ignore    []string
+	Ignore    []string // filenames to ignore
 	Root      string
 	Visit     Visitor
+
+	modified []string
 }
 
+// Run blocks until context is done and should only be called once.
 func (s *Sensor) Run(ctx context.Context) {
-	if s.Pause == 0 {
+	if s.Pause == 0 { // make sure we don't spin out of control
 		s.Pause = time.Second
 	}
 	s.Last = time.Now()
@@ -44,6 +46,8 @@ func (s *Sensor) Run(ctx context.Context) {
 	}
 }
 
+// Visitor is the function called with all modified filenames as
+// arguments.
 type Visitor func(modified ...string)
 
 func noop(...string) {}
@@ -52,20 +56,13 @@ func (s *Sensor) scanForChanges() {
 	if s.Root == "" {
 		s.Root, _ = os.Getwd()
 	}
-	filepath.Walk(s.Root, s.visit)
+	filepath.Walk(s.Root, s.checkModTime)
 }
 
-// Ignore returns true if the file should be ignored
-func (s *Sensor) ignore(path string, f os.FileInfo) bool {
-	for _, str := range s.Ignore {
-		if strings.Contains(path, str) {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *Sensor) visit(path string, f os.FileInfo, err error) error {
+// checkModTime checks the given path and file info if it was modified
+// after the last check. All modified paths are stored in s.modified.
+// Directory changes are ignored and configured s.Ignore paths.
+func (s *Sensor) checkModTime(path string, f os.FileInfo, err error) error {
 	if f == nil {
 		return nil
 	}
@@ -92,4 +89,14 @@ func (s *Sensor) visit(path string, f os.FileInfo, err error) error {
 		return nil
 	}
 	return filepath.SkipDir
+}
+
+// Ignore returns true if the file should be ignored
+func (s *Sensor) ignore(path string, f os.FileInfo) bool {
+	for _, str := range s.Ignore {
+		if strings.Contains(path, str) {
+			return true
+		}
+	}
+	return false
 }
