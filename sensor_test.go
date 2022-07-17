@@ -17,15 +17,15 @@ func TestSensor_Run(t *testing.T) {
 	os.MkdirAll(filepath.Join(dir, "sub"), 0722)
 	os.MkdirAll(filepath.Join(dir, "vendor/a/b"), 0722)
 
+	var called bool
+	visit := func(...string) { called = true }
+
+	sens := NewSensor(dir, visit)
+	sens.Ignore = []string{"vendor/", "build"}
+	sens.Recursive = true
+	sens.Pause = 50 * time.Millisecond
+
 	var (
-		called bool
-		sens   = &Sensor{
-			Ignore:    []string{"vendor/", "build"},
-			Recursive: true,
-			root:      dir,
-			visit:     func(...string) { called = true },
-			Pause:     50 * time.Millisecond,
-		}
 		plus  = sens.Pause + 10*time.Millisecond
 		touch = func(filename string) *exec.Cmd {
 			cmd := exec.Command("touch", filepath.Join(dir, filename))
