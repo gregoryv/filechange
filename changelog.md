@@ -6,6 +6,7 @@ and this project adheres to http://semver.org/spec/v2.0.0.html.
 
 ## [Unreleased]
 
+- Add constructor NewSensor and hide fields Root and Visit
 - Add MIT license
 
 ## [0.1.1] 2021-08-19

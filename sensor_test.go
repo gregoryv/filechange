@@ -22,8 +22,8 @@ func TestSensor_Run(t *testing.T) {
 		sens   = &Sensor{
 			Ignore:    []string{"vendor/"},
 			Recursive: true,
-			Root:      dir,
-			Visit:     func(...string) { called = true },
+			root:      dir,
+			visit:     func(...string) { called = true },
 			Pause:     50 * time.Millisecond,
 		}
 		plus  = sens.Pause + 10*time.Millisecond

@@ -9,14 +9,22 @@ import (
 	"time"
 )
 
+func NewSensor(root string, v Visitor) *Sensor {
+	return &Sensor{
+		Pause: 2 * time.Second,
+		root:  root,
+		visit: v,
+	}
+}
+
 type Sensor struct {
 	Recursive bool
 	Pause     time.Duration // between scans
 	Last      time.Time
 	Ignore    []string // filenames to ignore
-	Root      string
-	Visit     Visitor
 
+	visit    Visitor
+	root     string
 	modified []string
 }
 
@@ -27,9 +35,6 @@ func (s *Sensor) Run(ctx context.Context) {
 	}
 	s.Last = time.Now()
 	s.modified = make([]string, 0)
-	if s.Visit == nil {
-		s.Visit = noop
-	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -37,7 +42,7 @@ func (s *Sensor) Run(ctx context.Context) {
 		case <-time.After(s.Pause):
 			s.scanForChanges()
 			if len(s.modified) > 0 {
-				s.Visit(s.modified...)
+				s.visit(s.modified...)
 				// Reset modified files, should not leak memory as
 				// it's only strings
 				s.modified = s.modified[:0:0]
@@ -54,10 +59,7 @@ type Visitor func(modified ...string)
 func noop(...string) {}
 
 func (s *Sensor) scanForChanges() {
-	if s.Root == "" {
-		s.Root, _ = os.Getwd()
-	}
-	filepath.Walk(s.Root, s.checkModTime)
+	filepath.Walk(s.root, s.checkModTime)
 }
 
 // checkModTime checks the given path and file info if it was modified
@@ -82,7 +84,7 @@ func (s *Sensor) checkModTime(path string, f os.FileInfo, err error) error {
 	if !f.IsDir() {
 		return nil
 	}
-	if s.Root == path {
+	if s.root == path {
 		// the starting directory
 		return nil
 	}
