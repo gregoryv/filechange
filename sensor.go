@@ -12,6 +12,7 @@ import (
 func NewSensor(root string, v Visitor) *Sensor {
 	return &Sensor{
 		Pause: 2 * time.Second,
+		c:     make(chan []string, 1),
 		root:  root,
 		visit: v,
 	}
@@ -27,6 +28,10 @@ type Sensor struct {
 	visit    Visitor
 	root     string
 	modified []string
+
+	// used to signal last modifications, it is cleared between scans
+	// see method Modified()
+	c chan []string
 }
 
 // Run blocks until context is done and should only be called once.
@@ -40,7 +45,18 @@ func (s *Sensor) Run(ctx context.Context) {
 		case <-time.After(s.Pause):
 			s.scanForChanges()
 			if len(s.modified) > 0 {
-				s.visit(s.modified...)
+				if s.visit != nil {
+					s.visit(s.modified...)
+				}
+				modifiedFiles := make([]string, len(s.modified))
+				copy(modifiedFiles, s.modified)
+				// clear any old non read modifications
+				select {
+				case <-s.c:
+				default:
+				}
+				// add new modifications
+				s.c <- modifiedFiles
 				// Reset modified files, should not leak memory as
 				// it's only strings
 				s.modified = s.modified[:0:0]
@@ -48,6 +64,10 @@ func (s *Sensor) Run(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (s *Sensor) Modified() <-chan []string {
+	return s.c
 }
 
 // Visitor is the function called with all modified filenames as
