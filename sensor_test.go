@@ -24,10 +24,11 @@ func TestSensor_Run(t *testing.T) {
 	sens.Ignore = []string{"vendor/", "build"}
 	sens.Recursive = true
 	// Use shorter interval to speed up test
-	sens.Pause = 50 * time.Millisecond
+	walkEstimate := time.Millisecond // measured to 29.098µs
+	sens.Pause = 10 * walkEstimate
 
 	var (
-		plus  = sens.Pause + 10*time.Millisecond
+		plus  = sens.Pause + 3*walkEstimate
 		touch = func(filename string) *exec.Cmd {
 			cmd := exec.Command("touch", filepath.Join(dir, filename))
 			if err := cmd.Run(); err != nil {
@@ -42,7 +43,7 @@ func TestSensor_Run(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go sens.Run(ctx)
 	defer cancel()
-	time.Sleep(time.Second)
+	time.Sleep(plus)
 
 	// create file in root triggers sensor
 	cmd := touch("a.txt")
