@@ -23,6 +23,7 @@ func TestSensor_Run(t *testing.T) {
 	sens := NewSensor(dir, visit)
 	sens.Ignore = []string{"vendor/", "build"}
 	sens.Recursive = true
+	// Use shorter interval to speed up test
 	sens.Pause = 50 * time.Millisecond
 
 	var (
@@ -93,14 +94,11 @@ func TestSensor_Run(t *testing.T) {
 		t.Errorf("%q triggered sensor", cmd)
 	}
 
-	/*
-
-		// Removed
-		sens.Recursive = true
-		d.MkdirAll("sub")
-		d.Touch("sub/x")
-		os.RemoveAll(d.Join("sub"))
-		time.Sleep(plus)
-		shouldNotSense("", nil)
-	*/
+	// Removing file should not trigger sensor
+	sens.Recursive = true
+	touch("sub/toremove")
+	os.RemoveAll(filepath.Join(dir, "sub/toremove"))
+	if time.Sleep(plus); called {
+		t.Error("removing file triggered sensor")
+	}
 }
