@@ -41,7 +41,7 @@ func TestSensor_Run(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go sens.Run(ctx)
 	defer cancel()
-	time.Sleep(plus)
+	time.Sleep(time.Second)
 
 	// create file in root triggers sensor
 	cmd := touch("a.txt")
@@ -82,6 +82,13 @@ func TestSensor_Run(t *testing.T) {
 	called = false // reset
 	sens.Recursive = false
 	os.MkdirAll(filepath.Join(dir, "build"), 0722)
+	if time.Sleep(plus); called {
+		t.Errorf("%q triggered sensor", cmd)
+	}
+
+	// FileInfo is nil
+	called = false // reset
+	sens.root = "/no-such-directory"
 	if time.Sleep(plus); called {
 		t.Errorf("%q triggered sensor", cmd)
 	}

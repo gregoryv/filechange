@@ -19,9 +19,10 @@ func NewSensor(root string, v Visitor) *Sensor {
 
 type Sensor struct {
 	Recursive bool
-	Pause     time.Duration // between scans
-	Last      time.Time
-	Ignore    []string // filenames to ignore
+	// between scans, should be > 0, sane values are >1s
+	Pause  time.Duration
+	Last   time.Time
+	Ignore []string // filenames to ignore
 
 	visit    Visitor
 	root     string
@@ -30,9 +31,6 @@ type Sensor struct {
 
 // Run blocks until context is done and should only be called once.
 func (s *Sensor) Run(ctx context.Context) {
-	if s.Pause == 0 { // make sure we don't spin out of control
-		s.Pause = time.Second
-	}
 	s.Last = time.Now()
 	s.modified = make([]string, 0)
 	for {
@@ -64,8 +62,8 @@ func (s *Sensor) scanForChanges() {
 // after the last check. All modified paths are stored in s.modified.
 // Directory changes are ignored and configured s.Ignore paths.
 func (s *Sensor) checkModTime(path string, f os.FileInfo, err error) error {
-	if f == nil {
-		return nil
+	if err != nil { // handle case when Sensor.root doesn't exist
+		return err
 	}
 	if s.ignore(path, f) {
 		if f.IsDir() {
