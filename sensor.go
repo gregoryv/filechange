@@ -1,3 +1,4 @@
+//Package filechange provides a sensor of file modifications.
 package filechange
 
 import (
