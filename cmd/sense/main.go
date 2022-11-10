@@ -14,6 +14,7 @@ func main() {
 	var (
 		cli       = cmdline.NewBasicParser()
 		root, _   = os.Getwd()
+		pause     = cli.Option("-i, --interval").Duration("2s")
 		recursive = cli.Flag("-r, --recursive")
 		script    = cli.Option("-s, --script").String("./.onchange.sh")
 		dir       = cli.NamedArg("DIR").String(root)
@@ -28,5 +29,6 @@ func main() {
 		os.Stdout.Write(out)
 	})
 	s.Recursive = recursive
+	s.Pause = pause
 	s.Run(context.Background())
 }
