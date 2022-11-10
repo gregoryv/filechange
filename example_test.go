@@ -9,10 +9,10 @@ import (
 
 func Example() {
 	s := filechange.NewSensor(".", func(modified ...string) {
+		// do something with the modified files
 		fmt.Println(modified)
 	})
 	s.Recursive = true
 
-	ctx, _ := context.WithCancel(context.Background())
-	go s.Run(ctx)
+	go s.Run(context.Background())
 }
