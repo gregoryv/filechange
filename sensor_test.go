@@ -23,10 +23,10 @@ func TestSensor_Run(t *testing.T) {
 	sensor.Recursive = true
 	// Use shorter interval to speed up test
 	walkEstimate := time.Millisecond // measured to 29.098µs
-	sensor.Pause = 10 * walkEstimate
+	sensor.Interval = 10 * walkEstimate
 
 	var (
-		plus  = sensor.Pause + 3*walkEstimate
+		plus  = sensor.Interval + 3*walkEstimate
 		touch = func(filename string) *exec.Cmd {
 			cmd := exec.Command("touch", filepath.Join(dir, filename))
 			if err := cmd.Run(); err != nil {

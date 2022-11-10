@@ -1,4 +1,4 @@
-//Package filechange provides a sensor of file modifications.
+// Package filechange provides a sensor of file modifications.
 package filechange
 
 import (
@@ -11,18 +11,18 @@ import (
 
 func NewSensor(root string, v Visitor) *Sensor {
 	return &Sensor{
-		Pause: 2 * time.Second,
-		root:  root,
-		visit: v,
+		Interval: 2 * time.Second,
+		root:     root,
+		visit:    v,
 	}
 }
 
 type Sensor struct {
 	Recursive bool
 	// between scans, should be > 0, sane values are >1s
-	Pause  time.Duration
-	Last   time.Time
-	Ignore []string // filenames to ignore
+	Interval time.Duration
+	Last     time.Time
+	Ignore   []string // filenames to ignore
 
 	visit    Visitor
 	root     string
@@ -37,7 +37,7 @@ func (s *Sensor) Run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(s.Pause):
+		case <-time.After(s.Interval):
 			s.scanForChanges()
 			if len(s.modified) > 0 {
 				s.visit(s.modified...)
