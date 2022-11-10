@@ -6,6 +6,7 @@ and this project adheres to http://semver.org/spec/v2.0.0.html.
 
 ## [unreleased]
 
+- Add option --write-example-script
 - Add option --interval
 - cmd/sense executes ./.onchange.sh if found
 - Add options to cmd/sense
