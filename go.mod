@@ -1,8 +1,9 @@
 module github.com/gregoryv/filechange
 
-go 1.13
+go 1.23.0
 
-require (
-	github.com/gregoryv/cmdline v0.15.1
-	golang.org/x/net v0.36.0 // indirect
-)
+toolchain go1.23.4
+
+require github.com/gregoryv/cmdline v0.16.0
+
+require github.com/gregoryv/nexus v0.7.0 // indirect
