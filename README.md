@@ -1,3 +1,5 @@
+ARCHIVED! Moved to https://sogvin.com/filechange
+
 Filechange provides a sensor of file modifications
 
 ## Quick start
